@@ -655,7 +655,7 @@ app.post('/search', function (req, res) {
                                               source: token_id // obtained with Stripe.js
                                             }, function(err, order) {
                                                if(err)return res.send(JSON.stringify({ fail: true, error: err.message }));
-                                               //allocateDownloads(req.body.order);
+                                               allocateDownloads(req.body.order);
                                                return res.send(JSON.stringify({ success: true, data: order }));
                                             });
                                  });
