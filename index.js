@@ -824,6 +824,10 @@ app.post('/search', function (req, res) {
 
                 // file manager
                 app.get('/api/folder', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var paths = [];
                   var subNode = req.query.nodeId || '';
                   var items = fs.readdirSync(basePath + subNode);
@@ -847,6 +851,10 @@ app.post('/search', function (req, res) {
                 });
 
                 app.put('/api/folder', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var node = req.body;
 
                   if (isDirectory(node.id)) {
@@ -877,6 +885,10 @@ app.post('/search', function (req, res) {
                 });
 
                 app.put('/api/folder/move', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var data = req.body;
 
                   if (data.target === null) {
@@ -905,6 +917,10 @@ app.post('/search', function (req, res) {
                 });
 
                 app.post('/api/folder', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var data = req.body;
                   var node = data.node;
                   var parentFolderId = data.parentNodeId || '';
@@ -933,6 +949,10 @@ app.post('/search', function (req, res) {
 
 
                 app.delete('/api/folder', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var data = req.body;
                   var nodeId = data.nodeId || null;
 
@@ -974,6 +994,10 @@ app.post('/search', function (req, res) {
                   };
                 }
                 app.get('/api/files', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var files = [];
                   var subdir = req.query.dirId || '';
                   var items = fs.readdirSync(basePath + subdir);
@@ -994,7 +1018,7 @@ app.post('/search', function (req, res) {
 
 
                 app.post('/api/files', function (req, res) {
-                  res.header('Access-Control-Allow-Origin', 'http:localhost:4200');
+                  res.header('Access-Control-Allow-Origin', '*');
                   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
                   res.header('Access-Control-Allow-Headers', 'Content-Type');
                   res.setHeader('Content-Type', 'application/json');
@@ -1043,6 +1067,10 @@ app.post('/search', function (req, res) {
 
 
                 app.put('/api/files', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var body = req.body;
                   var fileId = body.id || null;
                   var bounds = body.bounds || null;
@@ -1069,6 +1097,10 @@ app.post('/search', function (req, res) {
                 });
 
                 app.delete('/api/files', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', '*');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
                   var fileId = req.query.id || null;
 
                   if (isFile(fileId)) {
