@@ -2,17 +2,46 @@
 var express = require('express');
 var cors = require('cors')
 var bodyParser = require('body-parser')
+var sizeOf = require('image-size');
+var path = require('path');
+var formidable = require('formidable');
+var mime = require('mime-types');
+var easyimg = require('easyimage');
+
+var baseDir = '/public'
+var basePath = __dirname + baseDir;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Ecommerce
 //var stripe = require('stripe')('sk_test_Ox1PdVkCNtAlBaQi4CTGLzR1');
 var stripe = require('stripe')('sk_live_qmbUYHirlLA6B7nxeQJYBDD3');
-
+var shippo = require('shippo')('shippo_test_86a4f2851b1b30b9fb7e68a6d9ab1d4c0e70d3a2');
 
 
 var passport = require('passport');
 var formidable = require('formidable');
 var fs = require('fs');
 
+// for file manager
+var isDirectory = function (path) {
+  try {
+    var dir = fs.statSync(basePath + path);
+
+    return dir && dir.isDirectory();
+  } catch (e) {
+    return false;
+  }
+};
+
+// for file manager
+var isFile = function (path) {
+  try {
+    var file = fs.statSync(basePath + path);
+
+    return file && file.isFile();
+  } catch (e) {
+    return false;
+  }
+};
 
     //Create APP
     var app = express();
@@ -23,6 +52,7 @@ var fs = require('fs');
 
     //Static Files
     app.use(express.static('public'));
+    app.use(express.static(basePath));
 
 
 
@@ -663,20 +693,52 @@ app.post('/search', function (req, res) {
                                  //Return Totals
                                   return res.send(JSON.stringify({ success: true, data: order }));
                              }
-
-
                         });
-
-
-
-                            //Return Totals
-
-
-
-
-
-
                });
+
+            app.post('/shippment', function (req, res) {
+                var addressFrom  = {
+                    "name": req.body.sender.name,
+                    "street1": req.body.sender.street,
+                    "city": req.body.sender.city,
+                    "state": req.body.sender.state,
+                    "zip": req.body.sender.zip,
+                    "country": req.body.sender.country,
+                    "phone": req.body.sender.phone,
+                    "email": req.body.sender.email
+                };
+
+                var addressTo = {
+                    "name": req.body.reciever.name,
+                    "street1": req.body.reciever.street,
+                    "city": req.body.reciever.city,
+                    "state": req.body.reciever.state,
+                    "zip": req.body.reciever.zip,
+                    "country": req.body.reciever.country,
+                    "phone": req.body.reciever.phone,
+                    "email": req.body.reciever.email
+                };
+
+                var parcel = {
+                    "length": parcel.length,
+                    "width": parcel.width,
+                    "height": parcel.width,
+                    "distance_unit": parcel.distance_unit,
+                    "weight": parcel.weight,
+                    "mass_unit": parcel.mass_unit
+                };
+
+                shippo.shipment.create({
+                    "address_from": addressFrom,
+                    "address_to": addressTo,
+                    "parcels": [parcel],
+                    "async": false
+                }, function(err, shipment){
+                    // asynchronously called
+                    if(err) return res.send(JSON.stringify({ fail: true, error: err.message }));
+                    return res.send(JSON.stringify({ success: true, data: shippment }));
+                });
+            })
 
 
              function allocateDownloads(order){
@@ -758,6 +820,266 @@ app.post('/search', function (req, res) {
                             db.close();
                           });
                         });
+                });
+
+                // file manager
+                app.get('/api/folder', function (req, res) {
+                  var paths = [];
+                  var subNode = req.query.nodeId || '';
+                  var items = fs.readdirSync(basePath + subNode);
+                  for (var i = 0; i < items.length; i++) {
+                    var name = items[i];
+                    var stat = fs.statSync(basePath + subNode + '/' + name);
+                    if (stat && stat.isDirectory()) {
+                      var dir = {
+                        id: subNode + '/' + name,
+                        parentId: subNode || null,
+                        name: name,
+                        children: []
+                      };
+
+                      paths.push(dir);
+                    }
+                  }
+
+                  res.json(paths);
+
+                });
+
+                app.put('/api/folder', function (req, res) {
+                  var node = req.body;
+
+                  if (isDirectory(node.id)) {
+                    var subNodes = node.id.split('/');
+                    subNodes[subNodes.length - 1] = node.name;
+                    var newNodeName = subNodes.join('/');
+
+                    if (isDirectory(newNodeName)) {
+                      res.sendStatus(403);
+                      res.json({msg: 'Directory already exists'});
+                    }
+                    else {
+                      fs.renameSync(basePath + node.id, basePath + newNodeName);
+
+                      if (isDirectory(newNodeName)) {
+                        node.id = newNodeName;
+                        res.json(node);
+                      } else {
+                        res.sendStatus(403);
+                        res.json({msg: 'Could not change node name'});
+                      }
+                    }
+
+                  } else {
+                    res.sendStatus(403);
+                    res.json({msg: 'Node does not exist'});
+                  }
+                });
+
+                app.put('/api/folder/move', function (req, res) {
+                  var data = req.body;
+
+                  if (data.target === null) {
+                    data.target = '';
+                  }
+
+                  if (isDirectory(data.source) && isDirectory(data.target)) {
+                    var subNodes = data.source.split('/');
+                    var dirName = subNodes[subNodes.length - 1];
+                    var newNodeName = data.target + '/' + dirName;
+
+                    fs.renameSync(basePath + data.source, basePath + newNodeName);
+                    var dir = {
+                      id: newNodeName,
+                      name: dirName,
+                      parentId: data.target,
+                      children: []
+                    };
+
+                    res.json(dir);
+                  } else {
+                    res.sendStatus(403);
+                    res.json({msg: 'Node does not exist'});
+                  }
+
+                });
+
+                app.post('/api/folder', function (req, res) {
+                  var data = req.body;
+                  var node = data.node;
+                  var parentFolderId = data.parentNodeId || '';
+                  var newNodeId = parentFolderId + '/' + node.name;
+
+                  if (!isDirectory(newNodeId)) {
+                    fs.mkdirSync(basePath + newNodeId);
+
+                    if (isDirectory(newNodeId)) {
+                      res.json({
+                        id: newNodeId,
+                        name: node.name,
+                        parentId: parentFolderId || null,
+                        children: []
+                      });
+                    } else {
+                      res.sendStatus(403);
+                      res.json({msg: 'Node has not been added'});
+                    }
+
+                  } else {
+                    res.sendStatus(403);
+                    res.json({msg: 'Node exists'});
+                  }
+                });
+
+
+                app.delete('/api/folder', function (req, res) {
+                  var data = req.body;
+                  var nodeId = data.nodeId || null;
+
+                  if (isDirectory(nodeId)) {
+                    fs.rmdirSync(basePath + nodeId);
+                    res.json({
+                      success: !isDirectory(nodeId)
+                    });
+                  } else {
+                    res.sendStatus(403);
+                    res.json({msg: 'Directory exists'});
+                  }
+                });
+
+
+                function prepareFile(filePath) {
+                  var src = filePath;
+                  var mimeType = mime.lookup(filePath);
+                  var isImage = false;
+                  var dimensions;
+                  var name = filePath.split('/').pop();
+
+                  if (mimeType) {
+                    isImage = mimeType.indexOf('image') === 0;
+                  }
+
+                  if (isImage) {
+                    dimensions = sizeOf(path.join(basePath, filePath))
+                  }
+
+                  return {
+                    id: filePath,
+                    name: name,
+                    thumbnailUrl: 'http://localhost:8080' + src,
+                    url: 'http://localhost:8080' + src,
+                    type: mimeType,
+                    width: isImage ? dimensions.width : 0,
+                    height: isImage ? dimensions.height : 0
+                  };
+                }
+                app.get('/api/files', function (req, res) {
+                  var files = [];
+                  var subdir = req.query.dirId || '';
+                  var items = fs.readdirSync(basePath + subdir);
+
+                  for (var i = 0; i < items.length; i++) {
+                    var name = items[i];
+                    var stat = fs.statSync(basePath + subdir + '/' + name);
+                    if (stat && stat.isFile()) {
+                      var path2 = path.join(subdir, name);
+
+                      files.push(prepareFile(path2));
+                    }
+                  }
+
+                  res.json(files);
+
+                });
+
+
+                app.post('/api/files', function (req, res) {
+                  res.header('Access-Control-Allow-Origin', 'http:localhost:4200');
+                  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+                  res.header('Access-Control-Allow-Headers', 'Content-Type');
+                  res.setHeader('Content-Type', 'application/json');
+                  var fileExist = false;
+                  var newPath;
+                  var form = new formidable.IncomingForm();
+
+                  form.multiples = true;
+
+                  form.uploadDir = basePath;
+
+                  form.on('file', function (field, file) {
+                    var folder = req.header('folderId');
+
+                    file.name = file.name.replace(/[^A-Za-z0-9\-\._]/g, '');
+
+                    if (folder) {
+                      newPath = path.join(folder, file.name);
+                    } else {
+                      newPath = file.name;
+                    }
+
+                    if (isFile(newPath)) {
+                      fileExist = true;
+                      fs.unlink(file.path);
+                    } else {
+                      fs.rename(file.path, basePath + newPath);
+                    }
+                  });
+
+                  form.on('error', function (err) {
+                    console.log('An error has occured: \n' + err);
+                  });
+
+                  form.on('end', function () {
+                    if (fileExist) {
+                      res.statusCode = 409;
+                      res.end('error');
+                    } else {
+                      res.json(prepareFile(newPath));
+                    }
+                  });
+
+                  form.parse(req);
+                });
+
+
+                app.put('/api/files', function (req, res) {
+                  var body = req.body;
+                  var fileId = body.id || null;
+                  var bounds = body.bounds || null;
+
+
+                  if (isFile(fileId)) {
+                    if (bounds) {
+                      var src = path.join(basePath, fileId);
+                      easyimg.crop({
+                        src: src,
+                        dst: src,
+                        cropwidth: bounds.width,
+                        cropheight: bounds.height,
+                        x: bounds.x,
+                        y: bounds.y,
+                        gravity: 'NorthWest'
+                      });
+                    }
+                    res.json(prepareFile(fileId));
+                  } else {
+                    res.status(403);
+                    res.json({msg: 'File does not exist'});
+                  }
+                });
+
+                app.delete('/api/files', function (req, res) {
+                  var fileId = req.query.id || null;
+
+                  if (isFile(fileId)) {
+                    fs.unlinkSync(path.join(basePath, fileId));
+                    res.json({
+                      success: true
+                    });
+                  } else {
+                    res.status(403);
+                    res.json({msg: 'File does not exist'});
+                  }
                 });
 
 
