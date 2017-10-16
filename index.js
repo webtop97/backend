@@ -12,8 +12,8 @@ var baseDir = '/public'
 var basePath = __dirname + baseDir;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Ecommerce
-//var stripe = require('stripe')('sk_test_Ox1PdVkCNtAlBaQi4CTGLzR1');
-var stripe = require('stripe')('sk_live_qmbUYHirlLA6B7nxeQJYBDD3');
+var stripe = require('stripe')('sk_test_Ox1PdVkCNtAlBaQi4CTGLzR1');
+// var stripe = require('stripe')('sk_live_qmbUYHirlLA6B7nxeQJYBDD3');
 var shippo = require('shippo')('shippo_test_86a4f2851b1b30b9fb7e68a6d9ab1d4c0e70d3a2');
 
 
