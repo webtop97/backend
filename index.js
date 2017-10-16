@@ -52,7 +52,7 @@ var isFile = function (path) {
 
     //Static Files
     app.use(express.static('public'));
-    app.use(express.static(basePath));
+    // app.use(express.static(basePath));
 
 
 
